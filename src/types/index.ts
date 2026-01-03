@@ -35,6 +35,7 @@ export interface UserProfile {
   displayName: string;
   nativeLanguage: string;
   targetLanguages: any; // stored as JSON in Prisma
+  preferredArtists: string[]; // ADDED: Missing field
   totalXp: number;
   currentStreak: number;
   longestStreak: number;

@@ -1,5 +1,5 @@
 // backend/src/services/auth.service.ts
-// FULLY FIXED: All type errors resolved
+// FULLY FIXED: All type errors resolved + Missing functions added
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -131,6 +131,61 @@ export const loginUser = async (data: LoginDTO) => {
     if (error instanceof AuthenticationError) throw error;
     console.error('Login error:', error);
     throw new Error('Login failed');
+  }
+};
+
+/**
+ * Refresh access token
+ * ADDED: Missing function
+ */
+export const refreshAccessToken = async (refreshToken: string) => {
+  try {
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { userId: string };
+
+    // Check if refresh token exists in database and is not expired
+    const storedToken = await prisma.refreshToken.findFirst({
+      where: {
+        token: refreshToken,
+        userId: decoded.userId,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (!storedToken) {
+      throw new AuthenticationError('Invalid or expired refresh token');
+    }
+
+    // Generate new access token
+    const accessToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '15m' });
+
+    return {
+      accessToken,
+    };
+  } catch (error) {
+    if (error instanceof AuthenticationError) throw error;
+    console.error('Token refresh error:', error);
+    throw new AuthenticationError('Failed to refresh token');
+  }
+};
+
+/**
+ * Logout user (invalidate refresh token)
+ * ADDED: Missing function
+ */
+export const logoutUser = async (refreshToken: string) => {
+  try {
+    // Delete refresh token from database
+    await prisma.refreshToken.deleteMany({
+      where: {
+        token: refreshToken,
+      },
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Don't throw error - logout should always succeed
   }
 };
 
