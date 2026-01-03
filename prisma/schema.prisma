@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  password         String
+  displayName      String?
+  nativeLanguage   String
+  targetLanguages  Json
+  preferredArtists  String[]  @default([])
+  isAdult          Boolean           @default(true)
+  totalXp          Int               @default(0)
+  currentStreak    Int               @default(0)
+  longestStreak    Int               @default(0)
+  lastPracticeDate DateTime?
+  createdAt        DateTime          @default(now())
+  sessions         LearningSession[]
+  refreshTokens    RefreshToken[]
+  songs            Song[]
+  vocabularyWords  VocabularyWord[]  @relation("UserVocabulary")
+}
+
+model Song {
+  id               String            @id @default(cuid())
+  userId           String
+  youtubeVideoId   String
+  title            String
+  artist           String
+  language         String
+  difficultyRating Int
+  isExplicit       Boolean           @default(false)
+  contentRating    String?
+  lyricsParsed     Json
+  addedAt          DateTime          @default(now())
+  sessions         LearningSession[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningSession {
+  id             String   @id @default(cuid())
+  userId         String
+  songId         String
+  difficulty     String
+  accuracy       Float
+  completedLines Int
+  totalLines     Int
+  timeSpentMs    Int
+  xpEarned       Int
+  completedAt    DateTime @default(now())
+  song           Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VocabularyWord {
+  id          String    @id @default(cuid())
+  userId      String
+  word        String
+  translation String?
+  language    String
+  context     String?
+  status      String    @default("learning")
+  createdAt   DateTime  @default(now())
+  learnedAt   DateTime?
+  user        User      @relation("UserVocabulary", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word, language])
+  @@index([userId, status])
+  @@index([userId, language])
+  @@map("vocabulary_words")
+}
