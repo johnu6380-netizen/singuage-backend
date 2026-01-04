@@ -24,8 +24,20 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://singuage.com',
+  'https://www.singuage.com',
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
