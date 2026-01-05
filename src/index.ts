@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.routes';
 import songsRoutes from './routes/songs.routes';
 import progressRoutes from './routes/progress.routes';
 import vocabularyRoutes from './routes/vocabulary_routes';
+import achievementsRoutes from './routes/achievements.routes';
 
 // Import middleware - CORRECTED PATH
 import { errorHandler } from './middleware/error.middleware';
@@ -54,6 +55,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/songs', songsRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
+app.use('/api/achievements', achievementsRoutes);
 
 // 404 handler
 app.use((req, res) => {

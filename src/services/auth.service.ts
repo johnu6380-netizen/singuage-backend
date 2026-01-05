@@ -274,3 +274,19 @@ export const updateUserProfile = async (
     throw new Error('Failed to update profile');
   }
 };
+
+/**
+ * Delete user account and related data
+ */
+export const deleteUserAccount = async (userId: string) => {
+  try {
+    // Remove any refresh tokens first (not strictly necessary due to cascade, but explicit)
+    await prisma.refreshToken.deleteMany({ where: { userId } });
+
+    // Delete user (cascade will remove related sessions, songs, vocabulary, etc.)
+    await prisma.user.delete({ where: { id: userId } });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    throw new Error('Failed to delete user');
+  }
+};

@@ -128,3 +128,22 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     res.status(apiError.statusCode).json({ error: apiError.message });
   }
 };
+
+/**
+ * DELETE /api/auth/delete
+ */
+export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    await authService.deleteUserAccount(req.user.id);
+
+    res.json({ message: 'Account deleted' });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
