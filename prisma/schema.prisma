@@ -8,23 +8,30 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
-  password         String
-  displayName      String?
-  nativeLanguage   String
-  targetLanguages  Json
-  preferredArtists  String[]  @default([])
-  isAdult          Boolean           @default(true)
-  totalXp          Int               @default(0)
-  currentStreak    Int               @default(0)
-  longestStreak    Int               @default(0)
-  lastPracticeDate DateTime?
-  createdAt        DateTime          @default(now())
-  sessions         LearningSession[]
-  refreshTokens    RefreshToken[]
-  songs            Song[]
-  vocabularyWords  VocabularyWord[]  @relation("UserVocabulary")
+  id                   String            @id @default(cuid())
+  email                String?           @unique
+  password             String
+  displayName          String?
+  nativeLanguage       String
+  targetLanguages      Json
+  isAdult              Boolean           @default(true)
+  totalXp              Int               @default(0)
+  currentStreak        Int               @default(0)
+  longestStreak        Int               @default(0)
+  lastPracticeDate     DateTime?
+  createdAt            DateTime          @default(now())
+  preferredArtists     String[]          @default([])
+  firstSongId          String?           @unique
+  songDailyLines       Json              @default("{}")
+  hasPremium           Boolean           @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  username             String            @unique
+  sessions             LearningSession[]
+  refreshTokens        RefreshToken[]
+  songs                Song[]
+  vocabularyWords      VocabularyWord[]  @relation("UserVocabulary")
+  passwordResets       PasswordReset[]   
 }
 
 model Song {
@@ -67,6 +74,20 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model PasswordReset {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, used])
+  @@map("password_resets")
+}
+
 model VocabularyWord {
   id          String    @id @default(cuid())
   userId      String
@@ -83,4 +104,15 @@ model VocabularyWord {
   @@index([userId, status])
   @@index([userId, language])
   @@map("vocabulary_words")
+}
+
+model YoutubeSearchCache {
+  id             Int      @id @default(autoincrement())
+  queryHash      String   @unique
+  canonicalQuery String
+  results        Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime?
+
+  @@index([expiresAt])
 }

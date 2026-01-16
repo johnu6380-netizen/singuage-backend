@@ -41,7 +41,12 @@ const envSchema = z.object({
   
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-  
+  // Stripe keys (backend-only). These should NEVER be exposed to the frontend.
+  // In development you may leave these empty, but in production set them in your
+  // hosting provider (e.g. Vercel Environment Variables). Do NOT commit secrets.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+   
   // Features
   ENABLE_RATE_LIMITING: z.string().default('true').transform(val => val === 'true'),
   ENABLE_CACHE: z.string().default('true').transform(val => val === 'true'),

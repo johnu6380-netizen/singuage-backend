@@ -4,6 +4,9 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/auth.service';
 import { handleApiError } from '../utils/errors';
+import { sendPasswordResetEmail } from '../utils/email';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 /**
  * POST /api/auth/register
@@ -145,5 +148,84 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     const apiError = handleApiError(error);
     res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * POST /api/auth/forgot-password
+ * Accepts { email }
+ * Always returns a generic success message to avoid user enumeration.
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== 'string') {
+      // Still return generic message
+      res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+      return;
+    }
+
+    const result = await authService.createPasswordReset(email);
+
+    // If a token was returned, send email. Otherwise, remain silent.
+    if (result && (result as any).token) {
+      const { token } = result as any;
+      // Build a reset link that contains only the token parameter.
+      // Ensure the link uses https and the FRONTEND_URL origin.
+      let frontend = process.env.FRONTEND_URL || FRONTEND_URL;
+      try {
+        const url = new URL(frontend);
+        url.protocol = 'https:';
+        frontend = url.origin;
+      } catch (e) {
+        // If FRONTEND_URL is not a full URL, fallback to FRONTEND_URL as provided
+        frontend = FRONTEND_URL;
+      }
+
+      const resetLink = `${frontend.replace(/\/+$/,'')}/reset-password?token=${encodeURIComponent(token)}`;
+      // Send the email (will log in dev if SMTP not configured)
+      await sendPasswordResetEmail(email, resetLink);
+    }
+
+    // Always return generic message
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    // Do not divulge internal errors to client
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Body: { token, newPassword }
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body || {};
+
+    if (!token || !newPassword || typeof newPassword !== 'string') {
+      res.status(400).json({ error: 'Invalid request' });
+      return;
+    }
+
+    // Basic server-side password validation (length only); frontend enforces stronger rules.
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      res.status(400).json({ error: 'Password does not meet requirements' });
+      return;
+    }
+
+    const result = await authService.resetUserPassword(token, newPassword);
+
+    if (!result || !(result as any).success) {
+      // Don't reveal whether token was invalid/expired – return a generic error
+      res.status(400).json({ error: 'Invalid or expired token' });
+      return;
+    }
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 };

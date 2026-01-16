@@ -163,20 +163,26 @@ export const vocabularyService = {
 
     const stats = {
       total: allWords.length,
-      learning: allWords.filter(w => w.status === 'learning').length,
-      learned: allWords.filter(w => w.status === 'learned').length,
-      byLanguage: [] as { language: string; count: number }[],
+      learning: allWords.filter((w) => w.status === 'learning').length,
+      learned: allWords.filter((w) => w.status === 'learned').length,
+      // byLanguage will include totals and breakdown by status
+      byLanguage: [] as { language: string; total: number; learning: number; learned: number }[],
     };
 
-    // Group by language
-    const languageCounts = allWords.reduce((acc, word) => {
-      acc[word.language] = (acc[word.language] || 0) + 1;
+    // Group by language and compute learning/learned counts
+    const langMap = allWords.reduce((acc, word) => {
+      if (!acc[word.language]) acc[word.language] = { total: 0, learning: 0, learned: 0 };
+      acc[word.language].total += 1;
+      if (word.status === 'learning') acc[word.language].learning += 1;
+      if (word.status === 'learned') acc[word.language].learned += 1;
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { total: number; learning: number; learned: number }>);
 
-    stats.byLanguage = Object.entries(languageCounts).map(([language, count]) => ({
+    stats.byLanguage = Object.entries(langMap).map(([language, v]) => ({
       language,
-      count,
+      total: v.total,
+      learning: v.learning,
+      learned: v.learned,
     }));
 
     return stats;

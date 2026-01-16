@@ -82,8 +82,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // Learning Category
     {
       id: 'first_song',
-      name: 'First Steps',
-      description: 'Complete your first song',
+      name: 'achievements.items.first_song.name',
+      description: 'achievements.items.first_song.description',
       icon: '🎵',
       category: 'Learning',
       unlocked: totalSessions >= 1,
@@ -93,8 +93,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'song_enthusiast',
-      name: 'Song Enthusiast',
-      description: 'Complete 10 songs',
+      name: 'achievements.items.song_enthusiast.name',
+      description: 'achievements.items.song_enthusiast.description',
       icon: '🎶',
       category: 'Learning',
       unlocked: totalSessions >= 10,
@@ -104,8 +104,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'song_master',
-      name: 'Song Master',
-      description: 'Complete 50 songs',
+      name: 'achievements.items.song_master.name',
+      description: 'achievements.items.song_master.description',
       icon: '🎼',
       category: 'Learning',
       unlocked: totalSessions >= 50,
@@ -115,8 +115,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'library_builder',
-      name: 'Library Builder',
-      description: 'Add 5 songs to your library',
+      name: 'achievements.items.library_builder.name',
+      description: 'achievements.items.library_builder.description',
       icon: '📚',
       category: 'Learning',
       unlocked: totalSongsAdded >= 5,
@@ -127,8 +127,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // Streak Category
     {
       id: 'streak_starter',
-      name: 'Streak Starter',
-      description: 'Maintain a 3-day streak',
+      name: 'achievements.items.streak_starter.name',
+      description: 'achievements.items.streak_starter.description',
       icon: '🔥',
       category: 'Streak',
       unlocked: longestStreak >= 3,
@@ -137,8 +137,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'week_warrior',
-      name: 'Week Warrior',
-      description: 'Maintain a 7-day streak',
+      name: 'achievements.items.week_warrior.name',
+      description: 'achievements.items.week_warrior.description',
       icon: '💪',
       category: 'Streak',
       unlocked: longestStreak >= 7,
@@ -147,8 +147,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'month_master',
-      name: 'Month Master',
-      description: 'Maintain a 30-day streak',
+      name: 'achievements.items.month_master.name',
+      description: 'achievements.items.month_master.description',
       icon: '🏆',
       category: 'Streak',
       unlocked: longestStreak >= 30,
@@ -159,8 +159,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // XP Category
     {
       id: 'xp_novice',
-      name: 'XP Novice',
-      description: 'Earn 100 total XP',
+      name: 'achievements.items.xp_novice.name',
+      description: 'achievements.items.xp_novice.description',
       icon: '⭐',
       category: 'XP',
       unlocked: totalXp >= 100,
@@ -169,8 +169,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'xp_expert',
-      name: 'XP Expert',
-      description: 'Earn 500 total XP',
+      name: 'achievements.items.xp_expert.name',
+      description: 'achievements.items.xp_expert.description',
       icon: '✨',
       category: 'XP',
       unlocked: totalXp >= 500,
@@ -179,8 +179,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'xp_master',
-      name: 'XP Master',
-      description: 'Earn 1000 total XP',
+      name: 'achievements.items.xp_master.name',
+      description: 'achievements.items.xp_master.description',
       icon: '💫',
       category: 'XP',
       unlocked: totalXp >= 1000,
@@ -191,8 +191,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // Languages Category
     {
       id: 'bilingual',
-      name: 'Bilingual',
-      description: 'Learn songs in 2 different languages',
+      name: 'achievements.items.bilingual.name',
+      description: 'achievements.items.bilingual.description',
       icon: '🌏',
       category: 'Languages',
       unlocked: uniqueLanguages >= 2,
@@ -201,8 +201,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'polyglot',
-      name: 'Polyglot',
-      description: 'Learn songs in 3 different languages',
+      name: 'achievements.items.polyglot.name',
+      description: 'achievements.items.polyglot.description',
       icon: '🌍',
       category: 'Languages',
       unlocked: uniqueLanguages >= 3,
@@ -211,8 +211,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'language_master',
-      name: 'Language Master',
-      description: 'Learn songs in 5 different languages',
+      name: 'achievements.items.language_master.name',
+      description: 'achievements.items.language_master.description',
       icon: '🌎',
       category: 'Languages',
       unlocked: uniqueLanguages >= 5,
@@ -223,8 +223,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // Mastery Category
     {
       id: 'perfect_score',
-      name: 'Perfect Score',
-      description: 'Complete a song with 100% accuracy',
+      name: 'achievements.items.perfect_score.name',
+      description: 'achievements.items.perfect_score.description',
       icon: '💯',
       category: 'Mastery',
       unlocked: perfectSessions.length >= 1,
@@ -234,8 +234,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'perfectionist',
-      name: 'Perfectionist',
-      description: 'Complete 5 songs with 100% accuracy',
+      name: 'achievements.items.perfectionist.name',
+      description: 'achievements.items.perfectionist.description',
       icon: '🎯',
       category: 'Mastery',
       unlocked: perfectSessions.length >= 5,
@@ -247,8 +247,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     // Challenge Category
     {
       id: 'hard_mode_hero',
-      name: 'Hard Mode Hero',
-      description: 'Complete a song in hard mode',
+      name: 'achievements.items.hard_mode_hero.name',
+      description: 'achievements.items.hard_mode_hero.description',
       icon: '⚡',
       category: 'Challenge',
       unlocked: hardModeSessions.length >= 1,
@@ -258,8 +258,8 @@ export const getUserAchievements = async (userId: string): Promise<Achievement[]
     },
     {
       id: 'hard_mode_master',
-      name: 'Hard Mode Master',
-      description: 'Complete 10 songs in hard mode',
+      name: 'achievements.items.hard_mode_master.name',
+      description: 'achievements.items.hard_mode_master.description',
       icon: '💥',
       category: 'Challenge',
       unlocked: hardModeSessions.length >= 10,

@@ -39,7 +39,7 @@ export const authenticate = async (
 
     req.user = {
       id: user.id,
-      email: user.email,
+      email: user.email ?? undefined,
     };
 
     next();
@@ -94,7 +94,7 @@ export const optionalAuthenticate = async (
     if (user) {
       req.user = {
         id: user.id,
-        email: user.email,
+        email: user.email ?? undefined,
       };
     }
 

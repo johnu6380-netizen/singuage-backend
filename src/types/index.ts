@@ -3,7 +3,8 @@
 import { Request } from 'express';
 
 export interface RegisterDTO {
-  email: string;
+  username: string;
+  email?: string;
   password: string;
   displayName?: string;
   nativeLanguage?: string;
@@ -12,7 +13,7 @@ export interface RegisterDTO {
 }
 
 export interface LoginDTO {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -31,11 +32,13 @@ export interface TokenPair {
 
 export interface UserProfile {
   id: string;
-  email: string;
+  email: string | null;
+  username: string;
   displayName: string;
   nativeLanguage: string;
   targetLanguages: any; // stored as JSON in Prisma
   preferredArtists: string[]; // ADDED: Missing field
+  hasPremium?: boolean;
   totalXp: number;
   currentStreak: number;
   longestStreak: number;

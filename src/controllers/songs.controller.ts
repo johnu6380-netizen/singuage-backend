@@ -1,322 +1,279 @@
 // backend/src/controllers/songs.controller.ts
-// FIXED: Always detect language from lyrics, lyrics required, batch re-detection endpoint
+// FIXED: Ensure all route handlers exist and are exported (createSong/getUserSongs/getSongByVideoId/getSongById/deleteSong/updateSong/redetectLanguages)
+// Also keeps existing behavior: lyrics required + language detection from lyrics when possible.
 
 import { Request, Response } from 'express';
 import * as songService from '../services/song.service';
-import { detectLanguage as detectLanguageUtil } from '../utils/language';
+import { handleApiError } from '../utils/errors';
+import { detectLanguage } from '../utils/language';
 
-export const createSong = async (req: Request, res: Response) => {
+/**
+ * Helper: attempt to detect language from lyrics.
+ * Falls back to provided language if detection fails.
+ */
+const detectSongLanguage = async (lyricsParsed: any, fallbackLanguage?: string): Promise<string> => {
   try {
-    const userId = (req.user as any)?.id as string;
+    // Prefer a plain text extraction from parsed lyrics if present
+    const lines: string[] =
+      Array.isArray(lyricsParsed?.lines)
+        ? lyricsParsed.lines
+            .map((l: any) => (typeof l?.text === 'string' ? l.text : ''))
+            .filter(Boolean)
+        : [];
+
+    const text = lines.join(' ').trim();
+
+    if (!text) return fallbackLanguage || 'unknown';
+
+    const detected = await detectLanguage(text);
+    // detectLanguage may return null; keep fallback
+    return detected?.language || fallbackLanguage || 'unknown';
+  } catch {
+    return fallbackLanguage || 'unknown';
+  }
+};
+
+/**
+ * POST /api/songs
+ * Create a new song for the authenticated user.
+ * Requires lyricsParsed.
+ * Language is detected from lyrics when possible.
+ */
+export const createSong = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
     const {
       youtubeVideoId,
       title,
       artist,
       language,
-      difficultyRating,
-      isExplicit,
-      contentRating,
-      lyrics,
-      forceLanguage, // NEW: Allow user to force a specific language
-    } = req.body;
-
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    if (!youtubeVideoId || !title || !artist) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // VALIDATION: Lyrics are now REQUIRED
-    if (!lyrics || typeof lyrics !== 'string' || lyrics.trim().length === 0) {
-      return res.status(400).json({ error: 'Lyrics are required to add a song' });
-    }
-
-    // Convert pasted lyrics into the minimal lyricsParsed structure
-    const lines = (lyrics as string)
-      .split('\n')
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .map((text, i) => ({
-        id: `${Date.now()}-${i}`,
-        lineNumber: i + 1,
-        text,
-        startTimeMs: 0,
-        endTimeMs: 0,
-      }));
-
-    const lyricsParsed = {
-      metadata: {
-        lineCount: lines.length,
-        totalDurationMs: 0,
-        syncQuality: 'low',
-        offsetMs: 0,
-      },
-      lines,
-    };
-
-    // IMPROVED: Language detection logic
-    let finalLanguage = language;
-
-    // If user explicitly forced a language (via UI toggle), respect it
-    if (forceLanguage && language && !['unknown', 'auto', 'detect', ''].includes(String(language).toLowerCase())) {
-      finalLanguage = language;
-      console.log('🔒 Using user-forced language:', finalLanguage);
-    } 
-    // Otherwise, ALWAYS detect language from lyrics (since lyrics are now required)
-    else {
-      try {
-        const text = lines.map((l: any) => l.text).join('\n');
-        const detected = await detectLanguageUtil(text);
-        
-        console.log('🔍 Language detection result:', {
-          detected: detected?.language,
-          confidence: detected?.confidence,
-          original: language
-        });
-
-        if (detected && detected.language && detected.confidence >= 0.3) {
-          finalLanguage = detected.language;
-          console.log('✅ Using detected language:', finalLanguage);
-        } else if (!finalLanguage || ['unknown', 'auto', 'detect', ''].includes(String(finalLanguage).toLowerCase())) {
-          // If detection failed and no valid language provided, default to 'en'
-          finalLanguage = 'en';
-          console.log('⚠️ Detection uncertain, defaulting to English');
-        }
-      } catch (err) {
-        console.warn('❌ Language detection failed:', err);
-        // Keep original or default to 'en'
-        if (!finalLanguage || ['unknown', 'auto', 'detect', ''].includes(String(finalLanguage).toLowerCase())) {
-          finalLanguage = 'en';
-        }
-      }
-    }
-
-    const song = await songService.createSong(userId, {
-      youtubeVideoId,
-      title,
-      artist,
-      language: finalLanguage,
       difficultyRating,
       isExplicit,
       contentRating,
       lyricsParsed,
-    });
+    } = req.body as {
+      youtubeVideoId?: string;
+      title?: string;
+      artist?: string;
+      language?: string;
+      difficultyRating?: number;
+      isExplicit?: boolean;
+      contentRating?: string | null;
+      lyricsParsed?: any;
+    };
 
-    return res.json({ song });
-  } catch (error) {
-    console.error('Create song error:', error);
-    return res.status(500).json({ error: 'Failed to create song' });
-  }
-};
-
-export const getUserSongs = async (req: Request, res: Response) => {
-  try {
-    const userId = (req.user as any)?.id as string;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-
-    const songs = await songService.getUserSongs(userId);
-    return res.json({ songs });
-  } catch (error) {
-    console.error('Get user songs error:', error);
-    return res.status(500).json({ error: 'Failed to fetch songs' });
-  }
-};
-
-export const getSongByVideoId = async (req: Request, res: Response) => {
-  try {
-    const videoId = req.params.videoId;
-    if (!videoId) return res.status(400).json({ error: 'videoId required' });
-
-    const song = await songService.getSongByVideoId(videoId);
-    return res.json({ song: song || null });
-  } catch (error) {
-    console.error('Get song by video id error:', error);
-    return res.status(500).json({ error: 'Failed to fetch song' });
-  }
-};
-
-export const deleteSong = async (req: Request, res: Response) => {
-  try {
-    const userId = (req.user as any)?.id as string;
-    const songId = req.params.id;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    if (!songId) return res.status(400).json({ error: 'song id required' });
-
-    await songService.deleteSong(userId, songId);
-    return res.json({ success: true });
-  } catch (error: any) {
-    console.error('Delete song error:', error?.message || error);
-    if (String(error?.message).toLowerCase().includes('forbidden')) {
-      return res.status(403).json({ error: 'Forbidden' });
+    // Backwards-compat: accept raw `lyrics` string from older clients and convert to lyricsParsed
+    let finalLyricsParsed = lyricsParsed;
+    if (!finalLyricsParsed && typeof (req.body as any).lyrics === 'string') {
+      const raw: string = (req.body as any).lyrics;
+      const lines = raw
+        .split('\n')
+        .map(l => ({ text: l.trim() }))
+        .filter((l: any) => l.text.length > 0);
+      finalLyricsParsed = { lines };
     }
-    return res.status(500).json({ error: 'Failed to delete song' });
-  }
-};
 
-export const updateSong = async (req: Request, res: Response) => {
-  try {
-    const userId = (req.user as any)?.id as string;
-    const songId = req.params.id;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-    if (!songId) return res.status(400).json({ error: 'song id required' });
+    if (!youtubeVideoId) {
+      res.status(400).json({ error: 'youtubeVideoId is required' });
+      return;
+    }
 
-    const {
+    if (!title) {
+      res.status(400).json({ error: 'title is required' });
+      return;
+    }
+
+    if (!finalLyricsParsed) {
+      res.status(400).json({ error: 'lyricsParsed is required' });
+      return;
+    }
+
+    const detectedLanguage = await detectSongLanguage(finalLyricsParsed, language);
+
+    const song = await songService.createSong(userId, {
+      youtubeVideoId,
       title,
-      artist,
-      language,
-      difficultyRating,
-      isExplicit,
-      contentRating,
-      lyrics,
-      forceLanguage, // NEW: Allow forcing language
-    } = req.body;
+      artist: artist || 'Unknown Artist',
+      language: detectedLanguage,
+      difficultyRating: difficultyRating ?? 1,
+      isExplicit: isExplicit ?? false,
+      contentRating: contentRating ?? null,
+      lyricsParsed: finalLyricsParsed,
+    });
 
-    // Build update payload
-    const updateData: any = {};
-    if (title) updateData.title = title;
-    if (artist) updateData.artist = artist;
-    if (typeof difficultyRating !== 'undefined') updateData.difficultyRating = difficultyRating;
-    if (typeof isExplicit !== 'undefined') updateData.isExplicit = isExplicit;
-    if (typeof contentRating !== 'undefined') updateData.contentRating = contentRating;
-
-    // Handle lyrics -> lyricsParsed conversion if provided
-    if (typeof lyrics === 'string') {
-      if (lyrics.trim().length > 0) {
-        const lines = (lyrics as string)
-          .split('\n')
-          .map((t) => t.trim())
-          .filter(Boolean)
-          .map((text, i) => ({
-            id: `${Date.now()}-${i}`,
-            lineNumber: i + 1,
-            text,
-            startTimeMs: 0,
-            endTimeMs: 0,
-          }));
-
-        updateData.lyricsParsed = {
-          metadata: {
-            lineCount: lines.length,
-            totalDurationMs: 0,
-            syncQuality: 'low',
-            offsetMs: 0,
-          },
-          lines,
-        };
-
-        // IMPROVED: Language detection on update
-        // If user forced a specific language, use it
-        if (forceLanguage && language && !['unknown', 'auto', 'detect', ''].includes(String(language).toLowerCase())) {
-          updateData.language = language;
-          console.log('🔒 Using user-forced language on update:', language);
-        }
-        // Otherwise, detect from lyrics
-        else {
-          try {
-            const text = lines.map((l: any) => l.text).join('\n');
-            const detected = await detectLanguageUtil(text);
-            
-            console.log('🔍 Update language detection:', {
-              detected: detected?.language,
-              confidence: detected?.confidence,
-              provided: language
-            });
-
-            if (detected && detected.language && detected.confidence >= 0.3) {
-              updateData.language = detected.language;
-              console.log('✅ Using detected language on update:', detected.language);
-            } else if (language) {
-              updateData.language = language;
-            }
-          } catch (err) {
-            console.warn('❌ Language detection (update) failed:', err);
-            if (language) updateData.language = language;
-          }
-        }
-      } else {
-        updateData.lyricsParsed = {
-          metadata: {
-            lineCount: 0,
-            totalDurationMs: 0,
-            syncQuality: 'none',
-            offsetMs: 0,
-          },
-          lines: [],
-        };
-      }
-    } else if (language) {
-      // Language updated without changing lyrics
-      updateData.language = language;
-    }
-
-    const updated = await songService.updateSong(userId, songId, updateData);
-    return res.json({ song: updated });
-  } catch (error: any) {
-    console.error('Update song error:', error?.message || error);
-    const msg = String(error?.message || '').toLowerCase();
-    if (msg.includes('not found')) return res.status(404).json({ error: 'Song not found' });
-    if (msg.includes('forbidden')) return res.status(403).json({ error: 'Forbidden' });
-    return res.status(500).json({ error: 'Failed to update song' });
+    res.json({ song });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
   }
 };
 
-// NEW: Batch re-detect languages for existing songs
-export const redetectLanguages = async (req: Request, res: Response) => {
+/**
+ * GET /api/songs
+ * Get all songs for the authenticated user.
+ */
+export const getUserSongs = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = (req.user as any)?.id as string;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-
-    // Get all user's songs
+    const userId = req.user!.id;
     const songs = await songService.getUserSongs(userId);
-    
-    let updated = 0;
-    const results: any[] = [];
+    res.json({ songs });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
 
-    for (const song of songs) {
-      // Only re-detect if song has lyrics: ensure lyricsParsed is an object with a lines array
-      if (
-        song.lyricsParsed &&
-        typeof song.lyricsParsed === 'object' &&
-        'lines' in (song.lyricsParsed as any) &&
-        Array.isArray((song.lyricsParsed as any).lines) &&
-        (song.lyricsParsed as any).lines.length > 0
-      ) {
-        try {
-          const text = (song.lyricsParsed as any).lines.map((l: any) => l.text).join('\n');
-          const detected = await detectLanguageUtil(text);
+/**
+ * GET /api/songs/:id
+ * Get a single song owned by the authenticated user.
+ */
+export const getSongById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
 
-          if (detected && detected.language && detected.confidence >= 0.3) {
-            // Only update if language changed
-            if (detected.language !== song.language) {
-              await songService.updateSong(userId, song.id, {
-                language: detected.language
-              });
-              
-              updated++;
-              results.push({
-                songId: song.id,
-                title: song.title,
-                oldLanguage: song.language,
-                newLanguage: detected.language,
-                confidence: detected.confidence
-              });
-              
-              console.log(`✅ Updated "${song.title}": ${song.language} → ${detected.language} (${detected.confidence})`);
-            }
-          }
-        } catch (err) {
-          console.warn(`❌ Failed to detect language for "${song.title}":`, err);
-        }
-      }
+    const song = await songService.getSongById(userId, id);
+    res.json({ song });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * GET /api/songs/video/:videoId
+ * Public endpoint to fetch a song by YouTube video id.
+ */
+export const getSongByVideoId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { videoId } = req.params;
+    const song = await songService.getSongByVideoId(videoId);
+    res.json({ song: song || null });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * GET /api/songs/video/:videoId/me
+ * Get a song for the authenticated user by YouTube video id
+ */
+export const getUserSongByVideoId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { videoId } = req.params;
+    const song = await songService.getUserSongByVideoId(userId, videoId);
+    res.json({ song: song || null });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * DELETE /api/songs/:id
+ * Delete a song owned by the authenticated user.
+ */
+export const deleteSong = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+
+    await songService.deleteSong(userId, id);
+
+    res.json({ success: true });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * PUT /api/songs/:id
+ * Update song metadata (and optionally lyricsParsed).
+ * If lyricsParsed changes, we re-detect language from lyrics.
+ */
+export const updateSong = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+
+    const updates = req.body as Partial<{
+      title: string;
+      artist: string;
+      language: string;
+      difficultyRating: number;
+      isExplicit: boolean;
+      contentRating: string | null;
+      lyricsParsed: any;
+    }>;
+
+    // Backwards-compat: accept raw `lyrics` string on updates and convert to lyricsParsed
+    const incoming: any = { ...updates };
+    if (!incoming.lyricsParsed && typeof (req.body as any).lyrics === 'string') {
+      const raw: string = (req.body as any).lyrics;
+      const lines = raw
+        .split('\n')
+        .map((l: string) => ({ text: l.trim() }))
+        .filter((l: any) => l.text.length > 0);
+      incoming.lyricsParsed = { lines };
     }
 
-    return res.json({
+    // If lyricsParsed provided, re-detect language from lyrics
+    let languageToSave = incoming.language ?? updates.language;
+    if (incoming.lyricsParsed) {
+      languageToSave = await detectSongLanguage(incoming.lyricsParsed, incoming.language);
+    }
+
+    // Prevent sending raw 'lyrics' field to Prisma (schema doesn't have it)
+    delete incoming.lyrics;
+
+    const updated = await songService.updateSong(userId, id, {
+      ...incoming,
+      language: languageToSave ?? incoming.language,
+    });
+
+    res.json({ song: updated });
+  } catch (error) {
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
+  }
+};
+
+/**
+ * POST /api/songs/redetect-languages
+ * Re-detect languages for all songs owned by the authenticated user.
+ * Useful when improving detection or importing songs.
+ *
+ * This endpoint MUST exist because songs.routes.ts references it.
+ */
+export const redetectLanguages = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    const songs = await songService.getUserSongs(userId);
+
+    const results = await Promise.all(
+      songs.map(async (s) => {
+        const newLang = await detectSongLanguage(s.lyricsParsed, s.language);
+        if (newLang && newLang !== s.language) {
+          const updated = await songService.updateSong(userId, s.id, { language: newLang });
+          return { songId: s.id, old: s.language, next: updated.language, changed: true };
+        }
+        return { songId: s.id, old: s.language, next: s.language, changed: false };
+      })
+    );
+
+    res.json({
       success: true,
-      totalSongs: songs.length,
-      updatedCount: updated,
-      results
+      total: results.length,
+      changed: results.filter((r) => r.changed).length,
+      results,
     });
   } catch (error) {
-    console.error('Batch re-detect error:', error);
-    return res.status(500).json({ error: 'Failed to re-detect languages' });
+    const apiError = handleApiError(error);
+    res.status(apiError.statusCode).json({ error: apiError.message });
   }
 };

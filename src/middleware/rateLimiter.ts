@@ -149,3 +149,41 @@ export const sessionUpdateRateLimiter = rateLimit({
   },
   skip: () => !env.ENABLE_RATE_LIMITING,
 });
+
+/**
+ * Rate limiter specifically for forgot-password endpoint
+ * e.g., 5 requests per hour per IP
+ */
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: process.env.FORGOT_PASSWORD_MAX ? Number(process.env.FORGOT_PASSWORD_MAX) : 5,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many password reset requests, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !env.ENABLE_RATE_LIMITING,
+});
+
+/**
+ * Rate limiter specifically for reset-password endpoint
+ * e.g., 10 requests per hour per IP to prevent token brute-force
+ */
+export const resetPasswordRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: process.env.RESET_PASSWORD_MAX ? Number(process.env.RESET_PASSWORD_MAX) : 10,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many password reset attempts, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !env.ENABLE_RATE_LIMITING,
+});
