@@ -16,9 +16,9 @@ if (!stripeSecret) {
 
 const stripe = new Stripe(stripeSecret, { apiVersion: '2022-11-15' as any });
 
-// Price ID for the subscription. This must match the Price ID configured in your Stripe account.
-// Replace this value when switching between test and live environments.
-const PRICE_ID = 'price_1SmcNlLcNmM8Z6GeBEDX1sDz';
+// Price ID for the subscription. Use the live Price ID provided for production.
+// If you need to override in different environments, consider moving this to env vars later.
+const PRICE_ID = 'prod_Tn79v0ZFVI5CxY';
 
 /*
   Payment flow (high-level):
