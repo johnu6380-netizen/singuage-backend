@@ -102,7 +102,7 @@ router.get('/', authenticate, async (req: Request, res: Response): Promise<void>
 /**
  * GET /api/progress/song/:songId
  */
-router.get('/song/:songId', authenticate, async (req: Request, res: Response): Promise<void> => {
+router.get('/song/:songId', authenticate, async (req: Request<{ songId: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { songId } = req.params;

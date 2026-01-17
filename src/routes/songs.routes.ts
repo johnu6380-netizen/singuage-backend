@@ -22,7 +22,7 @@ router.get('/video/:videoId', getSongByVideoId);
 
 // NEW: Get the authenticated user's song by video id (protected)
 // Implemented inline to avoid controller export mismatch issues.
-router.get('/video/:videoId/me', authenticate, async (req: Request, res: Response): Promise<void> => {
+router.get('/video/:videoId/me', authenticate, async (req: Request<{ videoId: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { videoId } = req.params;

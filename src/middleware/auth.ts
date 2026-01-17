@@ -122,7 +122,8 @@ export const checkResourceOwnership = (
         throw new AuthenticationError('Not authenticated');
       }
 
-      const resourceId = req.params[paramName];
+      const rawParam = req.params[paramName];
+      const resourceId = Array.isArray(rawParam) ? rawParam[0] : rawParam;
 
       if (!resourceId) {
         res.status(400).json({

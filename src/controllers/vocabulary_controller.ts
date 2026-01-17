@@ -58,7 +58,7 @@ export const getUserWords = async (req: Request, res: Response): Promise<Respons
 };
 
 // Update a word
-export const updateWord = async (req: Request, res: Response): Promise<Response | void> => {
+export const updateWord = async (req: Request<{ id: string }>, res: Response): Promise<Response | void> => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -84,7 +84,7 @@ export const updateWord = async (req: Request, res: Response): Promise<Response 
 };
 
 // Test if user knows a word
-export const testWord = async (req: Request, res: Response): Promise<Response | void> => {
+export const testWord = async (req: Request<{ id: string }>, res: Response): Promise<Response | void> => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -114,7 +114,7 @@ export const testWord = async (req: Request, res: Response): Promise<Response | 
 };
 
 // Delete a word
-export const deleteWord = async (req: Request, res: Response): Promise<Response | void> => {
+export const deleteWord = async (req: Request<{ id: string }>, res: Response): Promise<Response | void> => {
   try {
     const userId = req.user?.id;
     if (!userId) {

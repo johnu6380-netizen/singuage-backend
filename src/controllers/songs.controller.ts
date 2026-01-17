@@ -128,7 +128,7 @@ export const getUserSongs = async (req: Request, res: Response): Promise<void> =
  * GET /api/songs/:id
  * Get a single song owned by the authenticated user.
  */
-export const getSongById = async (req: Request, res: Response): Promise<void> => {
+export const getSongById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -145,7 +145,7 @@ export const getSongById = async (req: Request, res: Response): Promise<void> =>
  * GET /api/songs/video/:videoId
  * Public endpoint to fetch a song by YouTube video id.
  */
-export const getSongByVideoId = async (req: Request, res: Response): Promise<void> => {
+export const getSongByVideoId = async (req: Request<{ videoId: string }>, res: Response): Promise<void> => {
   try {
     const { videoId } = req.params;
     const song = await songService.getSongByVideoId(videoId);
@@ -160,7 +160,7 @@ export const getSongByVideoId = async (req: Request, res: Response): Promise<voi
  * GET /api/songs/video/:videoId/me
  * Get a song for the authenticated user by YouTube video id
  */
-export const getUserSongByVideoId = async (req: Request, res: Response): Promise<void> => {
+export const getUserSongByVideoId = async (req: Request<{ videoId: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { videoId } = req.params;
@@ -176,7 +176,7 @@ export const getUserSongByVideoId = async (req: Request, res: Response): Promise
  * DELETE /api/songs/:id
  * Delete a song owned by the authenticated user.
  */
-export const deleteSong = async (req: Request, res: Response): Promise<void> => {
+export const deleteSong = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -195,7 +195,7 @@ export const deleteSong = async (req: Request, res: Response): Promise<void> => 
  * Update song metadata (and optionally lyricsParsed).
  * If lyricsParsed changes, we re-detect language from lyrics.
  */
-export const updateSong = async (req: Request, res: Response): Promise<void> => {
+export const updateSong = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
