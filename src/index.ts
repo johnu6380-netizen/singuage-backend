@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 
 // Import Stripe webhook handler and additional routes so the dev entrypoint (src/index.ts)
 // behaves like src/server.ts used elsewhere. The dev script runs src/index.ts.
@@ -29,6 +30,9 @@ const app = express();
 // Default backend port is 3000 in this workspace
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy when running behind a proxy (e.g., Railway, Vercel) so secure cookies work
+app.set('trust proxy', true);
+
 // Middleware
 app.use(helmet());
 const allowedOrigins = [
@@ -47,6 +51,9 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Parse cookies so controllers can read HttpOnly refresh token cookie
+app.use(cookieParser());
 
 // Important: register Stripe webhook route BEFORE express.json so the raw body is available
 // for signature verification. This matches the behavior in server.ts.

@@ -8,6 +8,16 @@ import { sendPasswordResetEmail } from '../utils/email';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// NEW: cookie configuration for refresh tokens
+const REFRESH_COOKIE_NAME = 'refreshToken';
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'none' as const, // required for cross-site cookies
+  secure: process.env.NODE_ENV === 'production', // true in prod (HTTPS)
+  path: '/',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 /**
  * POST /api/auth/register
  */
@@ -15,10 +25,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await authService.registerUser(req.body);
 
+    // Set refresh token as a secure, cross-site cookie
+    if (result.refreshToken) {
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
+    }
+
+    // Return access token and user info (do NOT expose refresh token to JS)
     res.status(201).json({
       message: 'Registration successful',
       accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
       user: result.user,
     });
   } catch (error) {
@@ -34,10 +49,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await authService.loginUser(req.body);
 
+    // Set refresh token as a secure, cross-site cookie
+    if (result.refreshToken) {
+      res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
+    }
+
+    // Return access token and user info
     res.json({
       message: 'Login successful',
       accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
       user: result.user,
     });
   } catch (error) {
@@ -51,7 +71,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  */
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    // Accept refresh token from cookie OR body for compatibility
+    const refreshToken = (req.cookies && req.cookies[REFRESH_COOKIE_NAME]) || req.body?.refreshToken;
 
     if (!refreshToken) {
       res.status(400).json({ error: 'Refresh token required' });
@@ -75,7 +96,8 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
  */
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    // Prefer cookie, fallback to body
+    const refreshToken = (req.cookies && req.cookies[REFRESH_COOKIE_NAME]) || req.body?.refreshToken;
 
     if (!refreshToken) {
       res.status(400).json({ error: 'Refresh token required' });
@@ -83,6 +105,14 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     }
 
     await authService.logoutUser(refreshToken);
+
+    // Clear cookie on logout
+    res.clearCookie(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    });
 
     res.json({ message: 'Logout successful' });
   } catch (error) {
