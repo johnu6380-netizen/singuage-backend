@@ -45,6 +45,24 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
     // Domain/redirects - use FRONTEND_URL for production-safety
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+    // Resolve PRICE_ID: if a product id (prod_...) was provided, try to find an active price for it.
+    let priceToUse = PRICE_ID;
+    try {
+      if (PRICE_ID.startsWith('prod_')) {
+        logger.info('Configured Stripe identifier looks like a product id; resolving an active price for the product', { product: PRICE_ID });
+        const prices = await stripe.prices.list({ product: PRICE_ID, active: true, limit: 1 });
+        if (!prices || prices.data.length === 0) {
+          logger.error('No active Stripe prices found for product', { product: PRICE_ID });
+          return res.status(500).json({ error: 'Payment configuration error: no active price found for configured product' });
+        }
+        priceToUse = prices.data[0].id;
+        logger.info('Resolved product to price id', { product: PRICE_ID, price: priceToUse });
+      }
+    } catch (resolveErr: any) {
+      logger.error('Failed to resolve product to a price', { error: { message: resolveErr?.message, name: resolveErr?.name } });
+      return res.status(500).json({ error: 'Failed to resolve Stripe price for checkout' });
+    }
+
     // Create a Stripe Checkout session for a subscription.
     // Note: We set metadata/client_reference_id to link the session to our internal user id.
     // The session will handle customer creation if one doesn't exist.
@@ -53,7 +71,7 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: PRICE_ID,
+          price: priceToUse,
           quantity: 1,
         },
       ],
