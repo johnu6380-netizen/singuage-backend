@@ -39,31 +39,26 @@ app.use(helmet());
 // Parse cookies so controllers can read HttpOnly refresh token cookie
 app.use(cookieParser());
 
-// CORS: must be an exact origin when credentials are enabled. Use FRONTEND_URL in env.
-const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-// Additional explicit allowed origins (comma separated) e.g. from env ALLOWED_ORIGINS
-const extraAllowed = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
+// REPLACE CORS BLOCK
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser tools like curl or same-origin requests with no origin
     if (!origin) return callback(null, true);
 
-    if (origin === frontendOrigin) return callback(null, true);
-    if (extraAllowed.includes(origin)) return callback(null, true);
+    // Allow production domain
+    if (origin === "https://singuage.com") return callback(null, true);
 
-    // Optional: allow vercel preview domains if ALLOW_VERCEL_PREVIEWS=true
-    if (process.env.ALLOW_VERCEL_PREVIEWS === 'true' && origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
+    // Allow all Vercel preview deployments
+    if (origin.endsWith(".vercel.app")) return callback(null, true);
 
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error(`CORS blocked for ${origin}`));
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+// Allow preflight for all routes
+app.options("*", cors());
 
 // Important: register Stripe webhook route BEFORE express.json so the raw body is available
 // for signature verification. This matches the behavior in server.ts.
