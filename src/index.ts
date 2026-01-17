@@ -31,29 +31,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Trust proxy when running behind a proxy (e.g., Railway, Vercel) so secure cookies work
-app.set('trust proxy', true);
+// If behind a proxy, trust the first proxy so secure cookies and req.secure work
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet());
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://singuage.com',
-  'https://www.singuage.com',
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
-
 // Parse cookies so controllers can read HttpOnly refresh token cookie
 app.use(cookieParser());
+
+// CORS: must be an exact origin when credentials are enabled. Use FRONTEND_URL in env.
+const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+app.use(cors({
+  origin: frontendOrigin,
+  credentials: true,
+}));
 
 // Important: register Stripe webhook route BEFORE express.json so the raw body is available
 // for signature verification. This matches the behavior in server.ts.

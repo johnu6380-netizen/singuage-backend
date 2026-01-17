@@ -10,13 +10,22 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // NEW: cookie configuration for refresh tokens
 const REFRESH_COOKIE_NAME = 'refreshToken';
-const REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: 'none' as const, // required for cross-site cookies
-  secure: process.env.NODE_ENV === 'production', // true in prod (HTTPS)
-  path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-};
+const REFRESH_COOKIE_OPTIONS = (() => {
+  const opts: any = {
+    httpOnly: true,
+    sameSite: 'none' as const, // required for cross-site cookies
+    secure: process.env.NODE_ENV === 'production', // true in prod (HTTPS)
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+
+  // Optionally set cookie domain (example: ".up.railway.app") via env var
+  if (process.env.COOKIE_DOMAIN) {
+    opts.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  return opts;
+})();
 
 /**
  * POST /api/auth/register
@@ -107,12 +116,15 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     await authService.logoutUser(refreshToken);
 
     // Clear cookie on logout
-    res.clearCookie(REFRESH_COOKIE_NAME, {
+    // Use the same options used to set the cookie so the browser will remove it correctly.
+    const clearOpts: any = {
       httpOnly: true,
       sameSite: 'none',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
-    });
+    };
+    if (process.env.COOKIE_DOMAIN) clearOpts.domain = process.env.COOKIE_DOMAIN;
+    res.clearCookie(REFRESH_COOKIE_NAME, clearOpts);
 
     res.json({ message: 'Logout successful' });
   } catch (error) {
