@@ -41,8 +41,27 @@ app.use(cookieParser());
 
 // CORS: must be an exact origin when credentials are enabled. Use FRONTEND_URL in env.
 const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Additional explicit allowed origins (comma separated) e.g. from env ALLOWED_ORIGINS
+const extraAllowed = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: frontendOrigin,
+  origin: (origin, callback) => {
+    // Allow non-browser tools like curl or same-origin requests with no origin
+    if (!origin) return callback(null, true);
+
+    if (origin === frontendOrigin) return callback(null, true);
+    if (extraAllowed.includes(origin)) return callback(null, true);
+
+    // Optional: allow vercel preview domains if ALLOW_VERCEL_PREVIEWS=true
+    if (process.env.ALLOW_VERCEL_PREVIEWS === 'true' && origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 
