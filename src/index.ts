@@ -45,7 +45,11 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     // Allow production domain
-    if (origin === "https://singuage.com") return callback(null, true);
+    if (origin === "https://singuage.com" ||
+	origin === "https://www.singuage.com"
+    ) {
+	return callback(null, true);
+    }
 
     // Allow all Vercel preview deployments
     if (origin.endsWith(".vercel.app")) return callback(null, true);
